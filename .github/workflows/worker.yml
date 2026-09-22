@@ -1,0 +1,29 @@
+name: Worker
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  run-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup
+        uses: actions/checkout@v4
+
+      - name: Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install
+        run: npm ci
+
+      - name: Execute
+        env:
+          SOURCE_ENDPOINT: ${{ secrets.SOURCE_ENDPOINT }}
+          WEBHOOK_ENDPOINT: ${{ secrets.WEBHOOK_ENDPOINT }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+        run: node index.js

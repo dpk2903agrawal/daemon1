@@ -1,11 +1,11 @@
 const https = require('https');
 const http = require('http');
 
-const targetUrl = process.env.RUNNER_ENDPOINT;
-const authToken = process.env.RUNNER_SECRET;
+const targetUrl = process.env.WEBHOOK_ENDPOINT || process.env.SOURCE_ENDPOINT;
+const authToken = process.env.SECRET_KEY;
 
 if (!targetUrl) {
-  console.error('RUNNER_ENDPOINT is not defined');
+  console.error('Target endpoint is not defined');
   process.exit(1);
 }
 
@@ -22,7 +22,7 @@ async function execute() {
   const headers = {
     'Content-Type': 'application/json',
     'Content-Length': Buffer.byteLength(payload),
-    'User-Agent': 'Cloud-Cron-Runner/1.0',
+    'User-Agent': 'Cloud-Task-Runner/1.0',
   };
 
   if (authToken) {

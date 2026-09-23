@@ -1,28 +1,25 @@
-name: Worker
+name: Scheduled Task Runner
 
 on:
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '*/15 * * * *'
   workflow_dispatch:
 
 jobs:
-  run-sync:
+  run-task:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - name: Setup
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Install
-        run: npm install
-
-      - name: Execute
+      - name: Execute Runner
         env:
-          SOURCE_ENDPOINT: ${{ secrets.SOURCE_ENDPOINT }}
-          WEBHOOK_ENDPOINT: ${{ secrets.WEBHOOK_ENDPOINT }}
-          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          RUNNER_ENDPOINT: ${{ secrets.RUNNER_ENDPOINT }}
+          RUNNER_SECRET: ${{ secrets.RUNNER_SECRET }}
         run: node index.js

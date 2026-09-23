@@ -1,11 +1,5 @@
 {
-  "name": "daemon1",
+  "name": "runner",
   "version": "1.0.0",
-  "main": "index.js",
-  "scripts": {
-    "start": "node index.js"
-  },
-  "dependencies": {
-    "cheerio": "^1.0.0"
-  }
+  "private": true
 }

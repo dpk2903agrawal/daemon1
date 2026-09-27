@@ -2,7 +2,8 @@ name: Scheduled Task Runner
 
 on:
   schedule:
-    - cron: '*/15 * * * *'
+  
+    - cron: '*/5 * * * *'
   workflow_dispatch:
 
 jobs:
@@ -20,7 +21,7 @@ jobs:
 
       - name: Execute Runner
         env:
-          WEBHOOK_ENDPOINT: ${{ secrets.WEBHOOK_ENDPOINT }}
           SOURCE_ENDPOINT: ${{ secrets.SOURCE_ENDPOINT }}
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          WEBHOOK_ENDPOINT: ${{ secrets.WEBHOOK_ENDPOINT }}
         run: node index.js

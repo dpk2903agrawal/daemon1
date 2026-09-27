@@ -1,13 +1,27 @@
+
+
+
 const https = require('https');
 const http = require('http');
 
-const targetUrl = process.env.WEBHOOK_ENDPOINT || process.env.SOURCE_ENDPOINT;
-const authToken = process.env.SECRET_KEY;
+const endpoint = (process.env.SOURCE_ENDPOINT || process.env.WEBHOOK_ENDPOINT || '').replace(/\/+$/, '');
+const secret = process.env.SECRET_KEY || '';
 
-if (!targetUrl) {
-  console.error('Target endpoint is not defined');
+if (!endpoint || !secret) {
+  console.error('[Runner] Missing required environment configuration.');
   process.exit(1);
 }
+
+// Dynamically construct daemon target without exposing hardcoded URLs
+const targetPath = '/api/monitor/daemon-scan';
+let targetUrl = endpoint.includes('/api/')
+  ? endpoint
+  : `${endpoint}${targetPath}`;
+
+const sep = targetUrl.includes('?') ? '&' : '?';
+targetUrl = `${targetUrl}${sep}token=${encodeURIComponent(secret)}&onlyDue=true`;
+
+console.log('[Runner] Dispatching scheduled check...');
 
 async function execute() {
   const urlObj = new URL(targetUrl);
@@ -23,12 +37,9 @@ async function execute() {
     'Content-Type': 'application/json',
     'Content-Length': Buffer.byteLength(payload),
     'User-Agent': 'Cloud-Task-Runner/1.0',
+    'Authorization': `Bearer ${secret}`,
+    'x-webhook-secret': secret,
   };
-
-  if (authToken) {
-    headers['Authorization'] = `Bearer ${authToken}`;
-    headers['x-webhook-secret'] = authToken;
-  }
 
   const options = {
     hostname: urlObj.hostname,
@@ -36,7 +47,7 @@ async function execute() {
     path: urlObj.pathname + urlObj.search,
     method: 'POST',
     headers,
-    timeout: 55000,
+    timeout: 115000,
   };
 
   return new Promise((resolve, reject) => {
@@ -44,19 +55,19 @@ async function execute() {
       let data = '';
       res.on('data', (chunk) => { data += chunk; });
       res.on('end', () => {
-        console.log(`Status: ${res.statusCode}`);
+        console.log(`[Runner] Response HTTP Status: ${res.statusCode}`);
         resolve();
       });
     });
 
     req.on('error', (err) => {
-      console.error('Request failed:', err.message);
+      console.error('[Runner] Request error:', err.message);
       reject(err);
     });
 
     req.on('timeout', () => {
       req.destroy();
-      console.warn('Request timed out');
+      console.warn('[Runner] Request timed out.');
       resolve();
     });
 
@@ -66,5 +77,8 @@ async function execute() {
 }
 
 execute()
-  .then(() => process.exit(0))
+  .then(() => {
+    console.log('[Runner] Task finished.');
+    process.exit(0);
+  })
   .catch(() => process.exit(1));

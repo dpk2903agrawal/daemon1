@@ -1,33 +1,34 @@
-name: Cloud Watchdog Daemon
-
-on:
-  schedule:
-    - cron: '*/5 * * * *'
-  workflow_dispatch:
-
-jobs:
-  scheduled-job:
-    name: Execute Scheduled Watchdog
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Install Dependencies
-        run: npm install cheerio
-
-      - name: Run Cloud Monitor Runner
-        run: node index.js
-        env:
-          SITE_URL: ${{ secrets.SOURCE_ENDPOINT || vars.SOURCE_ENDPOINT || vars.SITE_URL }}
-          SOURCE_ENDPOINT: ${{ secrets.SOURCE_ENDPOINT || vars.SOURCE_ENDPOINT || vars.SITE_URL }}
-          WEBHOOK_SECRET: ${{ secrets.SECRET_KEY || secrets.WEBHOOK_SECRET }}
-          SECRET_KEY: ${{ secrets.SECRET_KEY || secrets.WEBHOOK_SECRET }}
-          WEBHOOK_ENDPOINT: ${{ secrets.WEBHOOK_ENDPOINT || vars.WEBHOOK_ENDPOINT }}
+async function getTargets() {
+  if (!SITE_URL) {
+    console.error('[Watchdog] Error: SITE_URL is not set in environment.');
+    return [];
+  }
+  try {
+    const res = await fetch(`${SITE_URL}/api/ai-scraper/portals?token=${SECRET}`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0',
+        'Authorization': `Bearer ${SECRET}`,
+        'x-webhook-secret': SECRET,
+      },
+    });
+    if (!res.ok) {
+      console.error(`[Watchdog] Error fetching from host: HTTP ${res.status}`);
+      return [];
+    }
+    const data = await res.json();
+    const active = (data.portals || []).filter((p) => p.isEnabled);
+    console.log(`[Watchdog] Loaded ${active.length} active target(s) from host.`);
+    return active.map((t) => ({
+      name: t.name,
+      url: t.url,
+      selector: 'a',
+      keywords: (t.keywords || 'recruitment,notice,admit,result,vacancy')
+        .split(',')
+        .map((k) => k.trim().toLowerCase())
+        .filter(Boolean),
+    }));
+  } catch (err) {
+    console.error('[Watchdog] Error connecting to host:', err.message);
+  }
+  return [];
+}
